@@ -7,7 +7,7 @@
 ````
 [dbconfig]
 watch=1
-pooltool=druid
+pool=druid
 
 [name]数据库连接别名
 type=mysql/pgsql/sqlserver
