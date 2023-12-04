@@ -15,7 +15,7 @@ public enum PoolType {
         this.type = type;
     }
 
-    public PoolType getPoolType(String type) {
+    public static PoolType getPoolType(String type) {
         PoolType[] values = PoolType.values();
         for (PoolType value : values) {
             if (value.type.equals(type)) {

@@ -10,6 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -27,6 +31,9 @@ public class DBConnectionPools {
     private static String appPath;
     // 项目名称
     private static String appName;
+
+    private static AtomicBoolean closed = new AtomicBoolean(false);
+
     // 数据库连接池对象 用于建立连接和获取连接
     private IDataSourceAdapter adapter;
 
@@ -54,6 +61,42 @@ public class DBConnectionPools {
         DBConnectionPools.appPath = "D:\\study\\hlrdb\\hlr-db-pool\\src\\main\\resources\\";
         DBConnectionPools.appName = "db";
         DBConnectionPools instance1 = DBConnectionPools.getInstance();
+        DBConnect dbConnect = new DBConnect();
+        try {
+            dbConnect.init("dyfh");
+
+            dbConnect.prepareStatement("select * from user_express_template where userId = ?");
+            dbConnect.setString(1, "2799130");
+            ResultSet resultSet = dbConnect.executeQuery();
+            while (resultSet.next()) {
+                String string = resultSet.getString("userId");
+                String dbNo = resultSet.getString("companieName");
+
+                System.out.println(string);
+                System.out.println(dbNo);
+            }
+
+
+        } catch (Exception e) {
+            System.out.println("query error");
+        } finally {
+            dbConnect.close();
+        }
+
+
+        destroy();
+
+
+    }
+
+    /**
+     * 线程池销毁方法
+     */
+    public static void destroy() {
+        if (closed.compareAndSet(false, true)) {
+            DBConnectionPools instance1 = getInstance();
+            instance1.adapter.shutdown();
+        }
     }
 
     /**
@@ -64,7 +107,7 @@ public class DBConnectionPools {
         try {
             createPools(dbPath);
         } catch (HlrPoolException e) {
-
+            logger.error("initDBConnectionPools error ...", e);
         }
     }
 
@@ -97,19 +140,19 @@ public class DBConnectionPools {
                     String kmstoken = iniFile.getParamData(dbName, "kmstoken");
                     String url = iniFile.getParamData(dbName, "url");
                     if (url != null) {
-                        String username = iniFile.getParamData(dbName, "username", "druid");
-                        String password = iniFile.getParamData(dbName, "password", "druid");
-                        String driver = iniFile.getParamData(dbName, "driver", "druid");
-                        int activetime = iniFile.getIntegerParamData(dbName, "activetime", 1111);
-                        int availablecount = iniFile.getIntegerParamData(dbName, "availablecount", 1111);
-                        int connectLifeTime = iniFile.getIntegerParamData(dbName, "connectLifeTime", 1111);
+                        String username = iniFile.getParamData(dbName, "username", "");
+                        String password = iniFile.getParamData(dbName, "password", "");
+                        String driver = iniFile.getParamData(dbName, "driver", "");
+                        int activetime = iniFile.getIntegerParamData(dbName, "activetime", 15000);
+                        int availablecount = iniFile.getIntegerParamData(dbName, "availablecount", 0);
+                        int connectLifeTime = iniFile.getIntegerParamData(dbName, "connectLifeTime", 1800000);
                         int houseKeepingSleepTime = iniFile.getIntegerParamData(dbName, "house-keeping-sleep-time", 5000);
                         int maxconn = iniFile.getIntegerParamData(dbName, "maxconn", 10);
                         int newconn = iniFile.getIntegerParamData(dbName, "newconn", 0);
                         if (newconn == 0) {
                             newconn = maxconn;
                         }
-                        extracted(dbName, url, username, password, driver, activetime, availablecount, connectLifeTime, houseKeepingSleepTime, maxconn, newconn);
+                        registerConnectionPool(dbName, url, username, password, driver, activetime, availablecount, connectLifeTime, houseKeepingSleepTime, maxconn, newconn);
                     }
 
                 }
@@ -121,7 +164,8 @@ public class DBConnectionPools {
         }
     }
 
-    private void extracted(String dbName, String url, String username, String password, String driver, int activetime, int availablecount, int connectLifeTime, int houseKeepingSleepTime, int maxconn, int newconn) {
+    // 增加数据库连接对象
+    private void registerConnectionPool(String dbName, String url, String username, String password, String driver, int activetime, int availablecount, int connectLifeTime, int houseKeepingSleepTime, int maxconn, int newconn) {
 
         if (dbName != null && url != null) {
             try {
@@ -138,17 +182,17 @@ public class DBConnectionPools {
         }
     }
 
+    // 线程池选择器
     private void initPool(String pool) {
         IDataSourceAdapter dataSourceAdapter = new DruidDataSourceAdapter();
-        if (PoolType.valueOf(pool) == PoolType.Druid) {
-            dataSourceAdapter.init();
+        if (PoolType.getPoolType(pool) == PoolType.Druid && dataSourceAdapter.init()) {
             adapter = dataSourceAdapter;
         }
 
 
     }
 
-
+    // 初始化db 项目路径
     private String initDbPath() {
         String appPath = DBConnectionPools.appPath;
         String appName = DBConnectionPools.appName;
@@ -210,5 +254,13 @@ public class DBConnectionPools {
         }
     }
 
-
+    /**
+     * 根据 库别名 获取连接
+     * @param dbname
+     * @return
+     * @throws SQLException
+     */
+    public Connection getConnection(String dbname) throws SQLException {
+        return adapter.getConnection(dbname);
+    }
 }
