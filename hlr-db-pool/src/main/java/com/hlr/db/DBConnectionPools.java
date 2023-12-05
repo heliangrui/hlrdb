@@ -44,6 +44,11 @@ public class DBConnectionPools {
         initDBConnectionPools();
     }
 
+    public static void setDBConfig(String appPath, String appName) {
+        DBConnectionPools.appPath = appPath;
+        DBConnectionPools.appName = appName;
+    }
+
     /**
      * 获取单例对象
      *
