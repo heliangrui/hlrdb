@@ -1,5 +1,6 @@
 package com.hlr.db;
 
+import com.hlr.db.config.PoolSnapshot;
 import com.hlr.db.config.PoolType;
 import com.hlr.db.tools.IDataSourceAdapter;
 import com.hlr.db.tools.impl.DruidDataSourceAdapter;
@@ -11,8 +12,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -33,7 +35,8 @@ public class DBConnectionPools {
     private static String appName;
 
     private static AtomicBoolean closed = new AtomicBoolean(false);
-
+    private static int watch;
+    private static long watchInterval;
     // 数据库连接池对象 用于建立连接和获取连接
     private IDataSourceAdapter adapter;
 
@@ -55,38 +58,6 @@ public class DBConnectionPools {
             }
         }
         return instance;
-    }
-
-    public static void main(String[] args) {
-        DBConnectionPools.appPath = "D:\\study\\hlrdb\\hlr-db-pool\\src\\main\\resources\\";
-        DBConnectionPools.appName = "db";
-        DBConnectionPools instance1 = DBConnectionPools.getInstance();
-        DBConnect dbConnect = new DBConnect();
-        try {
-            dbConnect.init("dyfh");
-
-            dbConnect.prepareStatement("select * from user_express_template where userId = ?");
-            dbConnect.setString(1, "2799130");
-            ResultSet resultSet = dbConnect.executeQuery();
-            while (resultSet.next()) {
-                String string = resultSet.getString("userId");
-                String dbNo = resultSet.getString("companieName");
-
-                System.out.println(string);
-                System.out.println(dbNo);
-            }
-
-
-        } catch (Exception e) {
-            System.out.println("query error");
-        } finally {
-            dbConnect.close();
-        }
-
-
-        destroy();
-
-
     }
 
     /**
@@ -119,7 +90,8 @@ public class DBConnectionPools {
         try {
             INIFile iniFile = new INIFile(dbPath);
             // 读取config配置
-            String paramData = iniFile.getParamData("dbconfig", "watch", "1");
+            watch = iniFile.getIntegerParamData("dbconfig", "watch", 1);
+            watchInterval = iniFile.getLongParamData("dbconfig", "watchInterval", 1000);
             String pool = iniFile.getParamData("config", "pool", "druid");
 
             initPool(pool);
@@ -158,10 +130,40 @@ public class DBConnectionPools {
                 }
             }
 
+            if (watch > 0) {
+                startWatch();
+            }
+
+
         } catch (Exception e) {
             logger.error("hlr-db-pool connect error。。", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private void startWatch() {
+        Map<String, Integer> connectionMap = new HashMap<>();
+        Map<String, Integer> curActiveMap = new HashMap<>();
+
+        new Thread(() -> {
+            while (!closed.get()) {
+                try {
+                    Thread.sleep(watchInterval);
+                } catch (InterruptedException e) {
+                }
+
+                String[] dbNames = adapter.getDbNames();
+                for (String dbName : dbNames) {
+                    PoolSnapshot snapshot = adapter.getSnapshot(dbName);
+                    if (watch == 2 || snapshot.getCurActiveCount() != curActiveMap.get(dbName) || snapshot.getConnection() != connectionMap.get(dbName)) {
+                        logger.info("uudbpool:db:{},{}", dbName, snapshot);
+                    }
+                    curActiveMap.put(dbName, snapshot.getCurActiveCount());
+                    connectionMap.put(dbName, snapshot.getConnection());
+                }
+            }
+        }, "DRUID POOL STAT").start();
+
     }
 
     // 增加数据库连接对象
@@ -256,6 +258,7 @@ public class DBConnectionPools {
 
     /**
      * 根据 库别名 获取连接
+     *
      * @param dbname
      * @return
      * @throws SQLException

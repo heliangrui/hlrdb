@@ -2,6 +2,7 @@ package com.hlr.db.tools.impl;
 
 import com.alibaba.druid.filter.Filter;
 import com.alibaba.druid.pool.DruidDataSource;
+import com.hlr.db.config.PoolSnapshot;
 import com.hlr.db.filter.DBLogTraceFilter;
 import com.hlr.db.tools.IDataSourceAdapter;
 import org.slf4j.Logger;
@@ -74,6 +75,18 @@ public class DruidDataSourceAdapter implements IDataSourceAdapter {
     @Override
     public String[] getDbNames() {
         return dataSourceMap.keySet().toArray(new String[0]);
+    }
+
+    @Override
+    public PoolSnapshot getSnapshot(String dbName) {
+        Map<String, Object> statData = dataSourceMap.get(dbName).getStatDataForMBean();
+        PoolSnapshot poolSnapshot = new PoolSnapshot();
+        poolSnapshot.setServerd((Long) statData.get("ConnectCount"));
+        poolSnapshot.setMaxCount((Integer) statData.get("MaxActive"));
+        poolSnapshot.setCurActiveCount((Integer) statData.get("ActiveCount"));
+        poolSnapshot.setAvailableCount((Integer) statData.get("PoolingCount"));
+        poolSnapshot.setConnection(poolSnapshot.getCurActiveCount() + poolSnapshot.getAvailableCount());
+        return poolSnapshot;
     }
 
     @Override

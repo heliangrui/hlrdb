@@ -3,7 +3,9 @@ package com.hlr.db.template;
 import com.hlr.db.DBConnect;
 import com.hlr.db.HlrPoolException;
 import com.hlr.db.mapper.RowMapper;
+import com.hlr.db.mapper.impl.ColumnBeanRowMapper;
 import com.hlr.db.mapper.impl.ColumnMapRowMapper;
+import com.hlr.db.mapper.impl.ColumnSimpleRowMapper;
 import com.hlr.db.transaction.DBTransactions;
 
 import java.io.StringWriter;
@@ -26,6 +28,15 @@ import java.util.Map;
  */
 public class DBTemplate {
 
+    /**
+     * 更新插入语句
+     *
+     * @param dbName 库别名
+     * @param sql    sql
+     * @param args   参数
+     * @return 更新数量
+     * @throws HlrPoolException
+     */
     public static int update(String dbName, String sql, Object... args) throws HlrPoolException {
         return execute(dbName, sql, (connect) -> {
             setValues(connect, args);
@@ -33,10 +44,45 @@ public class DBTemplate {
         }, false);
     }
 
-    public static int insert(String dbName, String sql, Object... args) throws HlrPoolException {
-        return update(dbName, sql, args);
+    /**
+     * 更新插入语句
+     *
+     * @param dbName 库别名
+     * @param sql    dql
+     * @return 更新数量
+     * @throws HlrPoolException
+     */
+    public static int update(String dbName, String sql) throws HlrPoolException {
+        return update(dbName, sql, null);
     }
 
+    /**
+     * 插入语句并返回自增id
+     *
+     * @param dbName 库别名
+     * @param sql    sql
+     * @param args   参数
+     * @return 自增id
+     * @throws HlrPoolException
+     */
+    public static long insertAndReturnAutoIncKey(String dbName, String sql, Object... args) throws HlrPoolException {
+        return execute(dbName, sql, (connect) -> {
+            setValues(connect, args);
+            connect.executeUpdate();
+            ResultSet generatedKeys = connect.getGeneratedKeys();
+            return generatedKeys.next() ? generatedKeys.getLong(1) : 0;
+        }, true);
+    }
+
+    /**
+     * 批量更新 插入语句
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param batchArgs 参数
+     * @return
+     * @throws HlrPoolException
+     */
     public static int[] batchUpdate(String dbName, String sql, List<Object[]> batchArgs) throws HlrPoolException {
         return execute(dbName, sql, (connect) -> {
             setBatchValues(connect, batchArgs);
@@ -44,6 +90,81 @@ public class DBTemplate {
         }, false);
     }
 
+    /**
+     * 获取列必须为一列
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType 基础类型such as：String.class,Long.class,Integer.class,Double.class...
+     * @param args      参数
+     * @param <T>
+     * @return list
+     * @throws HlrPoolException
+     */
+    public static <T> List<T> queryFromSimpleList(String dbName, String sql, Class<T> classType, Object... args) throws HlrPoolException {
+        return queryList(dbName, sql, new ColumnSimpleRowMapper<>(classType), args);
+    }
+
+    /**
+     * 获取列必须为一列
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType 基础类型such as：String.class,Long.class,Integer.class,Double.class...
+     * @param <T>
+     * @return list
+     * @throws HlrPoolException
+     */
+    public static <T> List<T> queryFromSimpleList(String dbName, String sql, Class<T> classType) throws HlrPoolException {
+        return queryList(dbName, sql, new ColumnSimpleRowMapper<>(classType), null);
+    }
+
+    /**
+     * 获取列必须为一列
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType 基础类型such as：String.class,Long.class,Integer.class,Double.class...
+     * @param args      参数
+     * @param <T>
+     * @return Object
+     * @throws HlrPoolException
+     */
+    public static <T> T queryFromSimpleObject(String dbName, String sql, Class<T> classType, Object... args) throws HlrPoolException {
+        List<T> ts = queryFromSimpleList(dbName, sql, classType, args);
+        if (ts != null && ts.size() > 0) {
+            return ts.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * 获取列必须为一列
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType 基础类型such as：String.class,Long.class,Integer.class,Double.class...
+     * @param <T>
+     * @return list
+     * @throws HlrPoolException
+     */
+    public static <T> T queryFromSimpleObject(String dbName, String sql, Class<T> classType) throws HlrPoolException {
+        List<T> ts = queryFromSimpleList(dbName, sql, classType, null);
+        if (ts != null && ts.size() > 0) {
+            return ts.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * 获取一条数据对象 Map
+     *
+     * @param dbName 库别名
+     * @param sql    sql
+     * @param args   参数
+     * @return map
+     * @throws HlrPoolException
+     */
     public static Map<String, Object> queryFromObject(String dbName, String sql, Object... args) throws HlrPoolException {
         List<Map<String, Object>> maps = queryList(dbName, sql, new ColumnMapRowMapper(), args);
         if (maps != null && maps.size() > 0) {
@@ -52,6 +173,107 @@ public class DBTemplate {
         return null;
     }
 
+    /**
+     * bean实体获取
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType bean。class
+     * @param args      参数
+     * @param <T>
+     * @return bean
+     * @throws HlrPoolException
+     */
+    public static <T> List<T> queryFromList(String dbName, String sql, Class<T> classType, Object... args) throws HlrPoolException {
+        return queryList(dbName, sql, new ColumnBeanRowMapper<>(classType), args);
+    }
+
+    /**
+     * bean实体获取
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType bean。class
+     * @param <T>
+     * @return bean
+     * @throws HlrPoolException
+     */
+    public static <T> List<T> queryFromList(String dbName, String sql, Class<T> classType) throws HlrPoolException {
+        return queryList(dbName, sql, new ColumnBeanRowMapper<>(classType), null);
+    }
+
+    /**
+     * bean实体获取
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType bean。class
+     * @param args      参数
+     * @param <T>
+     * @return bean
+     * @throws HlrPoolException
+     */
+    public static <T> T queryFromObject(String dbName, String sql, Class<T> classType, Object... args) throws HlrPoolException {
+        List<T> ts = queryList(dbName, sql, new ColumnBeanRowMapper<>(classType), args);
+        if (ts != null && !ts.isEmpty()) {
+            return ts.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * bean实体获取
+     *
+     * @param dbName    库别名
+     * @param sql       sql
+     * @param classType bean。class
+     * @param <T>
+     * @return bean
+     * @throws HlrPoolException
+     */
+    public static <T> T queryFromObject(String dbName, String sql, Class<T> classType) throws HlrPoolException {
+        List<T> ts = queryList(dbName, sql, new ColumnBeanRowMapper<>(classType), null);
+        if (ts != null && !ts.isEmpty()) {
+            return ts.get(0);
+        }
+        return null;
+    }
+
+
+    /**
+     * @param dbName
+     * @param sql
+     * @param args
+     * @return
+     * @throws HlrPoolException
+     */
+    public static List<Map<String, Object>> queryList(String dbName, String sql, Object... args) throws HlrPoolException {
+        return queryList(dbName, sql, new ColumnMapRowMapper(), args);
+    }
+
+    /**
+     * 获取一条数据对象 Map
+     *
+     * @param dbName
+     * @param sql
+     * @return
+     * @throws HlrPoolException
+     */
+    public static Map<String, Object> queryFromObject(String dbName, String sql) throws HlrPoolException {
+        return queryFromObject(dbName, sql, (Object) null);
+    }
+
+    /**
+     * 根据 RowMapper 获取获取数据
+     *
+     * @param dbName
+     * @param sql
+     * @param rowMapper
+     * @param args
+     * @param <T>
+     * @return
+     * @throws HlrPoolException
+     */
     public static <T> List<T> queryList(String dbName, String sql, RowMapper<T> rowMapper, Object... args) throws HlrPoolException {
         return execute(dbName, sql, (connect) -> {
             setValues(connect, args);
@@ -62,6 +284,20 @@ public class DBTemplate {
             }
             return result;
         }, false);
+    }
+
+    /**
+     * 根据 RowMapper 获取获取数据
+     *
+     * @param dbName
+     * @param sql
+     * @param rowMapper
+     * @param <T>
+     * @return
+     * @throws HlrPoolException
+     */
+    public static <T> List<T> queryList(String dbName, String sql, RowMapper<T> rowMapper) throws HlrPoolException {
+        return queryList(dbName, sql, rowMapper, null);
     }
 
 

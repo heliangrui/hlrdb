@@ -1,5 +1,6 @@
 package com.hlr.db.tools;
 
+import com.hlr.db.config.PoolSnapshot;
 import com.sun.jndi.ldap.pool.Pool;
 
 import java.sql.Connection;
@@ -22,7 +23,8 @@ public interface IDataSourceAdapter {
     void registerConnectionPool(String dbName, String url, String username, String password, int maxconn, int newconn, String driver, int houseKeepingSleepTime, int activeTime, int availablecount, int connectLifeTime) throws Exception;
 
     String[] getDbNames();
-    
+
+    PoolSnapshot getSnapshot(String dbName);
 
     void shutdown();
 }

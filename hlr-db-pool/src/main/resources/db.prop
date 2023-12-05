@@ -1,6 +1,6 @@
 [dbconfig]
 dbdefault=config
-watch=1
+watch=2
 
 [config]
 url=jdbc:mysql://m.local:3307/albb_config?useUnicode=true&characterEncoding=UTF-8

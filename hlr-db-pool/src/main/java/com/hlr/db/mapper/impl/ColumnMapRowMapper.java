@@ -21,7 +21,7 @@ public class ColumnMapRowMapper implements RowMapper<Map<String, Object>> {
         ResultSetMetaData metaData = rs.getMetaData();
         int columnCount = metaData.getColumnCount();
         Map<String, Object> map = new LinkedHashMap<>();
-        for (int i = 0; i < columnCount; i++) {
+        for (int i = 1; i <= columnCount; i++) {
             String catalogName = metaData.getColumnLabel(i);
             if (catalogName == null || catalogName.isEmpty()) {
                 catalogName = metaData.getColumnName(i);
