@@ -1,7 +1,6 @@
 package com.hlr.db.mapper.impl;
 
 import com.hlr.db.mapper.RowMapper;
-import com.sun.istack.internal.NotNull;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -18,7 +17,7 @@ public class ColumnSimpleRowMapper<T> implements RowMapper<T> {
 
     private Class<T> requiredType;
 
-    public ColumnSimpleRowMapper(@NotNull Class<T> requiredType) {
+    public ColumnSimpleRowMapper(Class<T> requiredType) {
         this.requiredType = requiredType;
     }
 

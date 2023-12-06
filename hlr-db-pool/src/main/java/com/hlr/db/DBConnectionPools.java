@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -178,14 +179,14 @@ public class DBConnectionPools {
             try {
                 adapter.registerConnectionPool(dbName, url, username, password, maxconn, newconn, driver, houseKeepingSleepTime, activetime, availablecount, connectLifeTime);
 
-                System.out.println("hlr-db-pool: registerConnectionPool " + dbName + " maxconn:" + maxconn + " newconn:" + newconn + " availablecount:" + availablecount + " successfully!");
+                logger.info("hlr-db-pool: registerConnectionPool " + dbName + " maxconn:" + maxconn + " newconn:" + newconn + " availablecount:" + availablecount + " successfully!");
             } catch (Exception var13) {
                 var13.printStackTrace();
-                System.out.println("hlr-db-pool: can't registerConnectionPool " + dbName);
+                logger.error("hlr-db-pool: can't registerConnectionPool " + dbName);
             }
 
         } else {
-            System.out.println("hlr-db-pool: can't registerConnectionPool, dbName=" + dbName + ", url=" + url);
+            logger.info("hlr-db-pool: can't registerConnectionPool, dbName=" + dbName + ", url=" + url);
         }
     }
 
@@ -201,58 +202,24 @@ public class DBConnectionPools {
 
     // 初始化db 项目路径
     private String initDbPath() {
-        String appPath = DBConnectionPools.appPath;
-        String appName = DBConnectionPools.appName;
         String thisFilePath;
         try {
-            if (appName != null && appPath != null) {
-                logger.info("hlr-db-pool appName:{},appPath:{}", appName, appPath);
+            if (DBConnectionPools.appName != null && DBConnectionPools.appPath != null) {
+                logger.info("hlr-db-pool appName:{},appPath:{}", DBConnectionPools.appName, DBConnectionPools.appPath);
             } else {
-                thisFilePath = Path.getFullPathRelateClass("/", DBConnectionPools.class);
-                boolean isWebApp = false;
-                boolean isOnejar = false;
-                int index1 = thisFilePath.indexOf("WEB-INF") - 1;
-                if (index1 == -2) {
-                    index1 = thisFilePath.indexOf("lib") - 1;
-                    if (index1 == -2) {
-                        isOnejar = true;
-                    }
-                } else {
-                    isWebApp = true;
+                URL systemResource = ClassLoader.getSystemResource("db.prop");
+                String path = systemResource.getPath();
+                if(path.contains(":")){
+                    path = path.substring(1);
                 }
-
-                if (index1 == -2) {
-                    index1 = thisFilePath.indexOf("bin") - 1;
-                }
-
-                if (isOnejar) {
-                    index1 = thisFilePath.lastIndexOf(File.separator) + 1;
-                    appName = thisFilePath.substring(index1, thisFilePath.length());
-                    appPath = thisFilePath + File.separator;
-                } else {
-                    if (index1 == -2) {
-                        throw new HlrPoolException("conn't location config file path!");
-                    }
-
-                    int index2 = thisFilePath.substring(0, index1).lastIndexOf(File.separator) + 1;
-                    appName = thisFilePath.substring(index2, index1);
-                    if (isWebApp) {
-                        appPath = thisFilePath.substring(0, index2);
-                    } else {
-                        appPath = thisFilePath.substring(0, index1);
-                    }
-                }
-
-                DBConnectionPools.appName = appName;
-                DBConnectionPools.appPath = appPath;
-
+                
+                DBConnectionPools.appName = "db";
+                DBConnectionPools.appPath = path.substring(0,path.indexOf("db.prop"));
             }
-
-            if (!appPath.endsWith(File.separator)) {
-                appPath = appPath + File.separator;
+            if (!DBConnectionPools.appPath.endsWith(File.separator)) {
+                DBConnectionPools.appPath = DBConnectionPools.appPath + File.separator;
             }
-
-            thisFilePath = appPath + appName + ".prop";
+            thisFilePath = DBConnectionPools.appPath + DBConnectionPools.appName + ".prop";
             logger.info(thisFilePath);
             return thisFilePath;
         } catch (Exception e) {

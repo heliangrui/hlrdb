@@ -1,7 +1,6 @@
 package com.hlr.db.mapper.impl;
 
 import com.hlr.db.mapper.RowMapper;
-import com.sun.istack.internal.NotNull;
 
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
@@ -19,7 +18,7 @@ public class ColumnBeanRowMapper<T> implements RowMapper<T> {
 
     private Class<T> requiredType;
 
-    public ColumnBeanRowMapper(@NotNull Class<T> requiredType) {
+    public ColumnBeanRowMapper(Class<T> requiredType) {
         this.requiredType = requiredType;
     }
 
