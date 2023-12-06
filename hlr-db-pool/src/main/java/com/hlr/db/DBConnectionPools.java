@@ -6,7 +6,6 @@ import com.hlr.db.tools.IDataSourceAdapter;
 import com.hlr.db.tools.impl.DruidDataSourceAdapter;
 import com.hlr.db.util.FileUtil;
 import com.hlr.db.util.INIFile;
-import com.hlr.db.util.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,7 +160,7 @@ public class DBConnectionPools {
                 String[] dbNames = adapter.getDbNames();
                 for (String dbName : dbNames) {
                     PoolSnapshot snapshot = adapter.getSnapshot(dbName);
-                    if (watch == 2 || snapshot.getCurActiveCount() != curActiveMap.get(dbName) || snapshot.getConnection() != connectionMap.get(dbName)) {
+                    if (watch == 2 || curActiveMap.get(dbName) == null || curActiveMap.get(dbName) != snapshot.getCurActiveCount() || connectionMap.get(dbName) == null || snapshot.getConnection() != connectionMap.get(dbName)) {
                         logger.info("uudbpool:db:{},{}", dbName, snapshot);
                     }
                     curActiveMap.put(dbName, snapshot.getCurActiveCount());
@@ -209,12 +208,12 @@ public class DBConnectionPools {
             } else {
                 URL systemResource = ClassLoader.getSystemResource("db.prop");
                 String path = systemResource.getPath();
-                if(path.contains(":")){
+                if (path.contains(":")) {
                     path = path.substring(1);
                 }
-                
+
                 DBConnectionPools.appName = "db";
-                DBConnectionPools.appPath = path.substring(0,path.indexOf("db.prop"));
+                DBConnectionPools.appPath = path.substring(0, path.indexOf("db.prop"));
             }
             if (!DBConnectionPools.appPath.endsWith(File.separator)) {
                 DBConnectionPools.appPath = DBConnectionPools.appPath + File.separator;
