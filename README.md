@@ -1,6 +1,6 @@
 # hlrdb
 
-## hlr-db-pool
+## hlr-db-pool 完成----
 数据库连接池提供
 封装连接和db操作
 解析文件格式 hlrdbpool.prop文件
@@ -21,7 +21,9 @@ availablecount=0
 connectLifeTime= 1
 
 ````
-
+后续任务：
+1、补充线程池c3p0
+2、kmstoken 实现
 
 ## hlr-orm-starter
-封装orm框架
+封装orm框架 未开始
