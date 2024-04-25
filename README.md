@@ -27,3 +27,5 @@ connectLifeTime= 1
 
 ## hlr-orm-starter
 封装orm框架 未开始
+思考-想做成什么样子  - 接口-xml 对应？
+

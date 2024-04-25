@@ -90,6 +90,19 @@ public class DBTemplate {
         }, false);
     }
 
+    public static <T> int[] batchUpdate(String dbName, String sql, BatchUpdateArgsGetter<T> getter, List<T> data) throws HlrPoolException {
+        return execute(dbName, sql, (connect) -> {
+
+            for (T tem : data) {
+                setValues(connect,getter.getArgs(tem));
+                connect.addBatch();
+            }
+            return connect.executeBatch();
+        }, false);
+    }
+    
+    
+
     /**
      * 获取列必须为一列
      *
